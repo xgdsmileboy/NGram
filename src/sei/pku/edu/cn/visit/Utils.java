@@ -1,0 +1,80 @@
+package sei.pku.edu.cn.visit;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.jdt.core.dom.Type;
+
+public class Utils {
+
+	private static Map<String, Type> fieldTypeMap = new HashMap<>();
+	private static Map<String, Map<String, Type>> localTypeMap = new HashMap<>();
+
+	public static boolean addFieldType(String fieldName, Type type) {
+		if (fieldTypeMap.containsKey(fieldName) && fieldTypeMap.get(fieldName) != type) {
+			System.out.println("Field type inconsistancy '" + fieldName + "' with types : "
+					+ fieldTypeMap.get(fieldName) + " and " + type);
+			return false;
+		}
+		fieldTypeMap.put(fieldName, type);
+		return true;
+	}
+
+	public static boolean addMethodVariableType(String methodName, String varName, Type type) {
+		if (!localTypeMap.containsKey(methodName)) {
+			Map<String, Type> map = new HashMap<>();
+			map.put(varName, type);
+			localTypeMap.put(methodName, map);
+			return true;
+		} else {
+			Map<String, Type> map = localTypeMap.get(methodName);
+			if (map.containsKey(varName) && map.get(varName) != type) {
+				System.out.println("Variable type inconsistancy of '" + varName + "' in method '" + methodName
+						+ "' with types : " + map.get(varName) + " and " + type);
+				return false;
+			}
+			map.put(varName, type);
+			return true;
+		}
+	}
+
+	public static Type getVariableType(String methodName, String varName) {
+		if (localTypeMap.containsKey(methodName) && localTypeMap.get(methodName).get(varName) != null) {
+			return localTypeMap.get(methodName).get(varName);
+		} else {
+			return fieldTypeMap.get(varName);
+		}
+	}
+
+	public static Class<?> convert2Class(Type type) {
+		
+		System.out.println("type : " + type);
+		
+		switch (type.toString()) {
+		case "void":
+			return void.class;
+		case "int":
+			return int.class;
+		case "char":
+			return char.class;
+		case "short":
+			return short.class;
+		case "long":
+			return long.class;
+		case "float":
+			return float.class;
+		case "double":
+			return double.class;
+		case "byte":
+			return byte.class;
+		default:
+		}
+		
+		if(type.toString().contains("[")){
+			return Arrays.class;
+		}
+		return null;
+	}
+
+}

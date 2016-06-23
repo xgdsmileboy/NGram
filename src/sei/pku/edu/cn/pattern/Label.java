@@ -1,0 +1,19 @@
+package sei.pku.edu.cn.pattern;
+
+public enum Label {
+	ASSIGN,
+	IF,
+	WHILE,
+	FOR,
+	EFOR,
+	INVOKE,
+	BREAK,
+	CONTINUE,
+	ARRAYACCESS,
+	ARRAYCREATE,
+	NEWINSTANCE,
+	CONDITIONAL,
+	RETURN,
+	VARDEF,
+	SWITCH
+}
