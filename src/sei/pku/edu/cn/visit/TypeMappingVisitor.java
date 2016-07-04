@@ -67,47 +67,47 @@ public class TypeMappingVisitor extends ASTVisitor {
 
 		public boolean visit(ConditionalExpression node) {
 
-			System.out.println("ConditionalExpression -->" + node);
+//			System.out.println("ConditionalExpression -->" + node);
 			return true;
 		}
 
 		public boolean visit(InfixExpression node) {
-			System.out.println("InfixExpression -->" + node);
+//			System.out.println("InfixExpression -->" + node);
 			return true;
 		}
 
 		public boolean visit(InstanceofExpression node) {
-			System.out.println("InstanceofExpression -->" + node);
+//			System.out.println("InstanceofExpression -->" + node);
 			return true;
 		}
 
 		public boolean visit(MethodInvocation node) {
-			System.out.println("MethodInvocation -->" + node);
+//			System.out.println("MethodInvocation -->" + node);
 			return true;
 		}
 
 		public boolean visit(Name node) {
-			System.out.println("Name -->" + node);
+//			System.out.println("Name -->" + node);
 			return true;
 		}
 
 		public boolean visit(ParenthesizedExpression node) {
-			System.out.println("ParenthesizedExpression -->" + node);
+//			System.out.println("ParenthesizedExpression -->" + node);
 			return true;
 		}
 
 		public boolean visit(PostfixExpression node) {
-			System.out.println("PostfixExpression -->" + node);
+//			System.out.println("PostfixExpression -->" + node);
 			return true;
 		}
 
 		public boolean visit(PrefixExpression node) {
-			System.out.println("PrefixExpression -->" + node);
+//			System.out.println("PrefixExpression -->" + node);
 			return true;
 		}
 
 		public boolean visit(TypeLiteral node) {
-			System.out.println("TypeLiteral -->" + node);
+//			System.out.println("TypeLiteral -->" + node);
 			return true;
 		}
 
@@ -118,7 +118,7 @@ public class TypeMappingVisitor extends ASTVisitor {
 				System.out.println(vdf.getName());
 				map.put(vdf.getName().toString(), node.getType());
 			}
-			System.out.println("VariableDeclarationStatement -->" + node);
+//			System.out.println("VariableDeclarationStatement -->" + node);
 			return true;
 		}
 
@@ -129,14 +129,14 @@ public class TypeMappingVisitor extends ASTVisitor {
 				System.out.println(vdf.getName());
 				map.put(vdf.getName().toString(), node.getType());
 			}
-			System.out.println("VariableDeclarationExpression -->" + node);
+//			System.out.println("VariableDeclarationExpression -->" + node);
 			return true;
 		}
 		
 		public boolean visit(SingleVariableDeclaration node){
 //			Class<?> clazz = Utils.convert2Class(node.getType());
 			map.put(node.getName().toString(), node.getType());
-			System.out.println("SingleVariableDeclaration -->" + node);
+//			System.out.println("SingleVariableDeclaration -->" + node);
 			return true;
 		}
 	}

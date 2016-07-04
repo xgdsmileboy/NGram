@@ -33,6 +33,8 @@ package sei.pku.edu.cn.pattern;
 	* var : <return, _, flag>				: return var;
 	* var : <vardef, _, flag>				: XXX var;
 	* var : <switch, _, flag> 				: switch(var) {}
+	* var : <params, _, flag>				: public void XXX(var){}
+	* var : <simpexp, _, flag>				: var + exp; var ++;
 	-----------------------------------------------------------------------------
  */
 

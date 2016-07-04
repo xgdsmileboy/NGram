@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jdt.core.JavaCore;
@@ -15,7 +17,7 @@ import sei.pku.edu.cn.pattern.Sequence;
 
 public class JavaFile {
 
-	Sequence sequence = new Sequence();
+	List<Sequence> sequences = new ArrayList<>();
 	
 	public JavaFile(String Path) {
 		if (Path == null)
@@ -23,7 +25,9 @@ public class JavaFile {
 		File file = new File(Path);
 		ergodic(file);
 		
-		System.out.println(sequence.toString());
+		for(Sequence sequence : sequences){
+			System.out.println(sequence.toString());
+		}
 		
 	}
 
@@ -39,7 +43,7 @@ public class JavaFile {
 					System.out.println("collect java file : " + f.getPath());
 					CompilationUnit compilationUnit = parse(readFileToString(f));
 					compilationUnit.accept(new TypeMappingVisitor());
-					compilationUnit.accept(new CollectVisitor(sequence));
+					compilationUnit.accept(new CollectVisitor(sequences));
 				}
 			}
 		}

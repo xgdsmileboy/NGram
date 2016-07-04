@@ -15,5 +15,7 @@ public enum Label {
 	CONDITIONAL,
 	RETURN,
 	VARDEF,
-	SWITCH
+	SWITCH,
+	PARAM,
+	SIMPLEXP
 }
