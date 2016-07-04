@@ -39,4 +39,37 @@ public abstract class PatternValue {
 	public static final long SWITCH_EXP 		= 0x20000000;
 	public static final long METHOD_PARAM		= 0x40000000;
 	public static final long SIMPLE_EXP			= 0x80000000;
+	
+//	public static final int OP_ADD				= 8;
+//	public static final int OP_MINUS			= 9;
+//	public static final int OP_MULTI			= 10;
+//	public static final int OP_DIV				= 11;
+//	public static final int OP_MOD				= 12;
+//	public static final int OP_ADD_ADD			= 13;
+//	public static final int OP_MUNIS_MINUS		= 14;
+//	public static final int OP_AND				= 15;
+//	public static final int OP_OR				= 16;
+//	public static final int OP_NOT				= 17;
+//	public static final int OP_XOR				= 18;
+//	public static final int OP_GT				= 19;
+//	public static final int OP_LT				= 20;
+//	public static final int OP_GE				= 21;
+//	public static final int OP_LE				= 22;
+//	public static final int OP_EQ				= 23;
+//	public static final int OP_NEQ				= 24;
+//	public static final int OP_COND				= 25;
+//	public static final int OP_SSL				= 26;
+//	public static final int OP_SSR				= 27;
+//	public static final int OP_SUR				= 28;
+//	public static final int OP_ASSIGN			= 29;
+//	public static final int OP_ADD_ASSIGN		= 30;
+//	public static final int OP_MINUS_ASSIGN		= 31;
+//	public static final int OP_MULTI_ASSIGN		= 32;
+//	public static final int OP_DIV_ASSIGN		= 33;
+//	public static final int OP_MOD_ASSGIN		= 34;
+//	public static final int OP_AND_ASSIGN		= 35;
+//	public static final int OP_OR_ASSIGN		= 36;
+//	public static final int OP_XOR_ASSIGN		= 37;
+//	public static final int OP_SSL_ASSIGN		= 38;
+//	public static final int OP_SSR_ASSIGN		= 39;
 }
