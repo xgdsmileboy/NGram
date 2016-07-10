@@ -4,20 +4,29 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 
+import sei.pku.edu.cn.normalize.Normalizer;
+import sei.pku.edu.cn.normalize.visitor.NormalizeVisitor;
 import sei.pku.edu.cn.pattern.Sequence;
 
 public class JavaFile {
-
-	List<Sequence> sequences = new ArrayList<>();
+	
+	Map<String, List<Sequence>> sequences = new HashMap<>();
+	
+	
+	String resultFileName = "result.txt";
 	
 	public JavaFile(String Path) {
 		if (Path == null)
@@ -25,10 +34,28 @@ public class JavaFile {
 		File file = new File(Path);
 		ergodic(file);
 		
-		for(Sequence sequence : sequences){
-			System.out.println(sequence.toString());
+		File file2 = new File(resultFileName);
+		FileWriter fileWriter = null;
+		try {
+			fileWriter = new FileWriter(file2, false);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		
+		for(Entry<String, List<Sequence>> entry : sequences.entrySet()){
+			try {
+				fileWriter.write(entry.getKey() + "\n");
+				fileWriter.write(entry.getValue() + "\n\n");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		try {
+			fileWriter.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void ergodic(File file) {
@@ -41,9 +68,18 @@ public class JavaFile {
 					ergodic(f);
 				} else if (f.getName().endsWith(".java")) {
 					System.out.println("collect java file : " + f.getPath());
+					List<Sequence> sequence = new ArrayList<>();
+					Utils.resetAll();
 					CompilationUnit compilationUnit = parse(readFileToString(f));
 					compilationUnit.accept(new TypeMappingVisitor());
-					compilationUnit.accept(new CollectVisitor(sequences));
+//					NormalizeVisitor normalizeVisitor = new NormalizeVisitor(compilationUnit);
+//					compilationUnit.accept(normalizeVisitor);
+//					System.out.println(normalizeVisitor.getCU());
+//					CompilationUnit normalizedICU = normalizeVisitor.getCU();
+					compilationUnit.accept(new CollectVisitor(sequence));
+					
+					sequences.put(f.getPath(), sequence);
+					
 				}
 			}
 		}
@@ -84,6 +120,7 @@ public class JavaFile {
 		parser.setSource(str.toCharArray());
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
 		parser.setResolveBindings(true);
+		parser.setStatementsRecovery(true);
 		return (CompilationUnit) parser.createAST(null);
 	}
 

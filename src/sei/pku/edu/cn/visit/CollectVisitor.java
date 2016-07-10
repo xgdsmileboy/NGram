@@ -30,6 +30,7 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.Type;
@@ -66,6 +67,7 @@ public class CollectVisitor extends ASTVisitor {
 	
 	List<Sequence> sequences;
 	Sequence sequence;
+	boolean debug = false;
 	
 	String methodName;
 	
@@ -77,6 +79,12 @@ public class CollectVisitor extends ASTVisitor {
 	public boolean visit(MethodDeclaration node) {
 		sequence = new Sequence();
 		methodName = node.getName().toString();
+		String params = "";
+		for(Object obj : node.parameters()){
+			SingleVariableDeclaration singleVariableDeclaration = (SingleVariableDeclaration) obj;
+			params += ","+singleVariableDeclaration.getType().toString();
+		}
+		methodName += params;
 		
 		List<ASTNode> parameters = node.parameters();
 		for(int i = 1; i <= parameters.size(); i++){
@@ -100,7 +108,9 @@ public class CollectVisitor extends ASTVisitor {
 		for(Statement statement : statementlist){
 			processStatement(statement, BlockLevel.BLOCK_NO);
 		}
-		sequences.add(sequence);
+		
+		sequences.add(sequence.filter());
+		
 		return true;
 	}
 	
@@ -147,32 +157,40 @@ public class CollectVisitor extends ASTVisitor {
 			
 			ForStatement forStatement = (ForStatement) statement;
 
-			for(Object init : forStatement.initializers()){
-				Expression initStatement = (Expression) init;
-				VariableVisitor varVisitor = new VariableVisitor();
-				initStatement.accept(varVisitor);
-				for(String variable : varVisitor.getVariables()){
+			if(forStatement.initializers() != null){
+			
+				for(Object init : forStatement.initializers()){
+					Expression initStatement = (Expression) init;
+					VariableVisitor varVisitor = new VariableVisitor();
+					initStatement.accept(varVisitor);
+					for(String variable : varVisitor.getVariables()){
+						Type clazz = Utils.getVariableType(methodName, variable);
+						StatementPattern statementPattern = new ForPattern(PatternValue.FOR_INIT, blockFlag);
+						sequence.addStatementPattern(variable, clazz, statementPattern);
+					}
+				}
+			}
+			
+			if(forStatement.getExpression() != null){
+				VariableVisitor variableVisitor = new VariableVisitor();
+				forStatement.getExpression().accept(variableVisitor);
+				for(String variable : variableVisitor.getVariables()){
 					Type clazz = Utils.getVariableType(methodName, variable);
-					StatementPattern statementPattern = new ForPattern(PatternValue.FOR_INIT, blockFlag);
+					StatementPattern statementPattern = new ForPattern(PatternValue.FOR_COND, blockFlag);
 					sequence.addStatementPattern(variable, clazz, statementPattern);
 				}
 			}
-			VariableVisitor variableVisitor = new VariableVisitor();
-			forStatement.getExpression().accept(variableVisitor);
-			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
-				StatementPattern statementPattern = new ForPattern(PatternValue.FOR_COND, blockFlag);
-				sequence.addStatementPattern(variable, clazz, statementPattern);
-			}
 			
-			for(Object update : forStatement.updaters()){
-				Expression updateStatement = (Expression) update;
-				VariableVisitor varVisitor = new VariableVisitor();
-				updateStatement.accept(varVisitor);
-				for(String variable : varVisitor.getVariables()){
-					Type clazz = Utils.getVariableType(methodName, variable);
-					StatementPattern statementPattern = new ForPattern(PatternValue.FOR_UPDATE, blockFlag);
-					sequence.addStatementPattern(variable, clazz, statementPattern);
+			if(forStatement.updaters() != null){
+				for(Object update : forStatement.updaters()){
+					Expression updateStatement = (Expression) update;
+					VariableVisitor varVisitor = new VariableVisitor();
+					updateStatement.accept(varVisitor);
+					for(String variable : varVisitor.getVariables()){
+						Type clazz = Utils.getVariableType(methodName, variable);
+						StatementPattern statementPattern = new ForPattern(PatternValue.FOR_UPDATE, blockFlag);
+						sequence.addStatementPattern(variable, clazz, statementPattern);
+					}
 				}
 			}
 			
@@ -332,7 +350,9 @@ public class CollectVisitor extends ASTVisitor {
 			ExpressionStatement expressionStatement = (ExpressionStatement) statement;
 			processExpression(expressionStatement.getExpression(), blockFlag);
 		} else {
-			System.out.println("Unknown statement while process : " + statement);
+			if(debug){
+				System.out.println("Unknown statement while process : " + statement);
+			}
 		}
 	}
 	
@@ -559,7 +579,9 @@ public class CollectVisitor extends ASTVisitor {
 			}
 			
 		} else {
-			System.out.println("Unknown expresion while process : "+expression);
+			if(debug){
+				System.out.println("Unknown expresion while process : "+expression);
+			}
 		}
 	}
 	

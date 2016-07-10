@@ -12,8 +12,14 @@ public class Sequence {
 	
 	private Map<String, List<StatementPattern>> sequenceMap = new HashMap<>();
 	
+	private int filterLenth = 3;
+	
 	public Sequence(){
 		
+	}
+	
+	public void setFilterLengh(int n){
+		filterLenth = n;
 	}
 	
 	public void addStatementPattern(String var, Type type, StatementPattern pattern){
@@ -29,6 +35,17 @@ public class Sequence {
 			patternList.add(pattern);
 			sequenceMap.put(variableWithClass, patternList);
 		}
+	}
+	
+	public Sequence filter(){
+		Sequence sequence = new Sequence();
+		for(Entry<String, List<StatementPattern>> entry : sequenceMap.entrySet()){
+			if(entry.getValue().size() < filterLenth){
+				continue;
+			}
+			sequence.sequenceMap.put(entry.getKey(), entry.getValue());
+		}
+		return sequence;
 	}
 	
 	public boolean containVariable(String var, Type type){
@@ -59,6 +76,18 @@ public class Sequence {
 	public String toString() {
 		StringBuffer stringBuffer = new StringBuffer();
 		for(Entry<String, List<StatementPattern>> entry : sequenceMap.entrySet()){
+			stringBuffer.append(entry.getKey() + " : ");
+			stringBuffer.append(entry.getValue().toString()+"\n");
+		}
+		return stringBuffer.toString();
+	}
+	
+	public String filterString(){
+		StringBuffer stringBuffer = new StringBuffer();
+		for(Entry<String, List<StatementPattern>> entry : sequenceMap.entrySet()){
+			if(entry.getValue().size() < filterLenth){
+				continue;
+			}
 			stringBuffer.append(entry.getKey() + " : ");
 			stringBuffer.append(entry.getValue().toString()+"\n");
 		}

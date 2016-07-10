@@ -22,6 +22,7 @@ import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
+import org.eclipse.jdt.internal.compiler.batch.FileSystem.ClasspathNormalizer;
 
 public class TypeMappingVisitor extends ASTVisitor {
 
@@ -40,6 +41,12 @@ public class TypeMappingVisitor extends ASTVisitor {
 	public boolean visit(MethodDeclaration node) {
 
 		String methodName = node.getName().toString();
+		String params = "";
+		for(Object obj : node.parameters()){
+			SingleVariableDeclaration singleVariableDeclaration = (SingleVariableDeclaration) obj;
+			params += ","+singleVariableDeclaration.getType().toString();
+		}
+		methodName += params;
 		Map<String, Type> map = new HashMap<>();
 		for (Object o : node.parameters()) {
 			SingleVariableDeclaration svd = (SingleVariableDeclaration) o;
@@ -115,7 +122,7 @@ public class TypeMappingVisitor extends ASTVisitor {
 //			Class<?> clazz = Utils.convert2Class(node.getType());
 			for (Object o : node.fragments()) {
 				VariableDeclarationFragment vdf = (VariableDeclarationFragment) o;
-				System.out.println(vdf.getName());
+//				System.out.println(vdf.getName());
 				map.put(vdf.getName().toString(), node.getType());
 			}
 //			System.out.println("VariableDeclarationStatement -->" + node);
@@ -126,7 +133,7 @@ public class TypeMappingVisitor extends ASTVisitor {
 //			Class<?> clazz = Utils.convert2Class(node.getType());
 			for (Object o : node.fragments()) {
 				VariableDeclarationFragment vdf = (VariableDeclarationFragment) o;
-				System.out.println(vdf.getName());
+//				System.out.println(vdf.getName());
 				map.put(vdf.getName().toString(), node.getType());
 			}
 //			System.out.println("VariableDeclarationExpression -->" + node);
