@@ -3,7 +3,7 @@ package sei.pku.edu.cn.normalize.visitor;
 import org.eclipse.jdt.core.dom.*;
 
 import sei.pku.edu.cn.normalize.Normalizer;
-import sei.pku.edu.cn.visit.Utils;
+import sei.pku.edu.cn.visit.TypingInfo;
 
 
 public class NormalizeVisitor extends ASTVisitor {

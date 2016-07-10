@@ -21,7 +21,7 @@ import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WildcardType;
 
 import sei.pku.edu.cn.normalize.common.util.VariableGenerator;
-import sei.pku.edu.cn.visit.Utils;
+import sei.pku.edu.cn.visit.TypingInfo;
 
 
 public class Generator {

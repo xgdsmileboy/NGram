@@ -7,7 +7,7 @@ import java.util.Map;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.Type;
 
-public class Utils {
+public class TypingInfo {
 
 	private static Map<String, Type> fieldTypeMap = new HashMap<>();
 	private static Map<String, Map<String, Type>> localTypeMap = new HashMap<>();

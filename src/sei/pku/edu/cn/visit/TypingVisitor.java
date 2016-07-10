@@ -24,7 +24,7 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.internal.compiler.batch.FileSystem.ClasspathNormalizer;
 
-public class TypeMappingVisitor extends ASTVisitor {
+public class TypingVisitor extends ASTVisitor {
 
 	public boolean visit(TypeDeclaration node) {
 
@@ -32,7 +32,7 @@ public class TypeMappingVisitor extends ASTVisitor {
 		for (FieldDeclaration f : fields) {
 			for (Object o : f.fragments()) {
 				VariableDeclarationFragment vdf = (VariableDeclarationFragment) o;
-				Utils.addFieldType(vdf.getName().toString(), f.getType());
+				TypingInfo.addFieldType(vdf.getName().toString(), f.getType());
 			}
 		}
 		return true;
@@ -50,14 +50,14 @@ public class TypeMappingVisitor extends ASTVisitor {
 		Map<String, Type> map = new HashMap<>();
 		for (Object o : node.parameters()) {
 			SingleVariableDeclaration svd = (SingleVariableDeclaration) o;
-			Utils.addMethodVariableType(methodName, svd.getName().toString(), svd.getType());
+			TypingInfo.addMethodVariableType(methodName, svd.getName().toString(), svd.getType());
 		}
 
 		MethodVisitor mv = new MethodVisitor();
 		node.accept(mv);
 
 		for (Entry<String, Type> entry : mv.getVarMap().entrySet()) {
-			Utils.addMethodVariableType(methodName, entry.getKey(), entry.getValue());
+			TypingInfo.addMethodVariableType(methodName, entry.getKey(), entry.getValue());
 		}
 
 		// System.out.println("MethodDeclaration = " + node);
