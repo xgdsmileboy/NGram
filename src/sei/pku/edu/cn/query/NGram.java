@@ -30,7 +30,7 @@ public class NGram {
 		return nGramSequences;
 	}
 	
-	public List<Sequences> query(Sequences sequences){
+	public List<Pair<Sequences, Double>> query(Sequences sequences){
 		List<Sequences> result = new ArrayList<>();
 		long represent = sequences.getHexValueRepresent();
 		for(Pair<Long, Sequences> pair : nGramSequences){
@@ -55,8 +55,17 @@ public class NGram {
 				preciseResult.add(seq);
 			}
 		}
-		
-		return preciseResult;
+		List<Pair<Sequences, Double>> sortSequences = statistic(preciseResult);
+		return sortSequences;
+	}
+	
+	
+	private List<Pair<Sequences, Double>> statistic(List<Sequences> sequences){
+		List<Pair<Sequences, Double>> sortSequences = new ArrayList<>();
+		for(Sequences sequences2 : sequences){
+			sortSequences.add(new Pair<Sequences, Double>(sequences2, Double.valueOf(1.0)));
+		}
+		return sortSequences;
 	}
 	
 }

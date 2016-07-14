@@ -1,6 +1,5 @@
 package sei.pku.edu.cn.pattern;
 
-import java.lang.Thread.State;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +49,7 @@ public class Sequences {
 			sequenceMap.put(variableWithType, patternList);
 		}
 	}
+	
 	
 	public List<Sequences> sliceSequence(int sliceLength){
 		List<Sequences> result = new ArrayList<>();

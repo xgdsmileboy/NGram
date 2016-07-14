@@ -76,12 +76,12 @@ public class JavaFile {
 		nGram.slicing();
 		Sequences query = new Sequences();
 		// 1000000001000000000 : k:int : [<FOR, 512, 0>, <ARRAYACCESS, 262144, 4>]
-//		query.addStatementPattern("k:int", new ForPattern(PatternValue.FOR_UPDATE, 0));
-//		query.addStatementPattern("k:int", new ArrayAccessPattern(PatternValue.ARRAY_ACC_INDEX, 4));
+		query.addStatementPattern("k:int", new ForPattern(PatternValue.FOR_UPDATE, 0));
+		query.addStatementPattern("k:int", new ArrayAccessPattern(PatternValue.ARRAY_ACC_INDEX, 4));
 		
 		// 10010000 : a:int : [<ASSIGN, 16, 4>, <FOR, 128, 4>]
-		query.addStatementPattern("a:int", new AssignPattern(PatternValue.ASSIGN_RIGHT, 4));
-		query.addStatementPattern("a:int", new ForPattern(PatternValue.FOR_INIT, 4));
+//		query.addStatementPattern("a:int", new AssignPattern(PatternValue.ASSIGN_RIGHT, 4));
+//		query.addStatementPattern("a:int", new ForPattern(PatternValue.FOR_INIT, 4));
 		
 		// 1000000000000000000000100000 : a:int : [<VARDEF, 134217728, -1>, <IF, 32, 0>]
 //		query.addStatementPattern("a:int", new VariableDefPattern());
@@ -90,8 +90,8 @@ public class JavaFile {
 		System.out.println("\n\nHere is a test query======\n");
 		System.out.println(Long.toBinaryString(query.getHexValueRepresent()) + " : " + query);
 		System.out.println("result------\n");
-		for(Sequences sequences : nGram.query(query)){
-			System.out.println(sequences);
+		for(Pair<Sequences, Double> sequences : nGram.query(query)){
+			System.out.println(sequences.getFirst());
 		}
 		
 	}
