@@ -665,7 +665,7 @@ public class Normalizer {
 			
 			//to avoid the situation of if(A && A.m()),while A is null, the A.m() will cause exception 
 			if(exp.toString().contains("&&")){
-				return new Pair<List<Statement>, Expression>(new ArrayList<>(), exp);
+				return new Pair<List<Statement>, Expression>(new ArrayList<Statement>(), exp);
 			}
 			
 			System.out.println("Normalizer >> method >> normalizeExp >> @581 Expression(InfixExpression):"+exp);
@@ -912,7 +912,7 @@ public class Normalizer {
 			
 			System.out.println(node);
 			
-			return new Pair<List<Statement>, Expression>(new ArrayList<>(), node);
+			return new Pair<List<Statement>, Expression>(new ArrayList<Statement>(), node);
 			
 		}else {
 			
