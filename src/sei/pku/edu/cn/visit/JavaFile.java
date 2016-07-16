@@ -16,6 +16,7 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.internal.compiler.ast.IfStatement;
 
 import sei.pku.edu.cn.pattern.ArrayAccessPattern;
 import sei.pku.edu.cn.pattern.AssignPattern;
@@ -29,8 +30,8 @@ import sei.pku.edu.cn.query.NGram;
 
 public class JavaFile {
 	
-	Map<String, List<Sequences>> sequences = new HashMap<>();
-	
+	private Map<String, List<Sequences>> sequences = new HashMap<>();
+	private List<Sequences> sList = new ArrayList<>();
 	
 	String resultFileName = "result.txt";
 	
@@ -48,22 +49,22 @@ public class JavaFile {
 			e.printStackTrace();
 		}
 		
-		List<Sequences> sList = new ArrayList<>();
+		
 		for(Entry<String, List<Sequences>> entry : sequences.entrySet()){
-			try {
-				fileWriter.write(entry.getKey() + "\n");
-				fileWriter.write(entry.getValue() + "\n\n");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+//			try {
+//				fileWriter.write(entry.getKey() + "\n");
+//				fileWriter.write(entry.getValue() + "\n\n");
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
 			
 			sList.addAll(entry.getValue());
-			NGram nGram = new NGram(entry.getValue());
-			List<Pair<Long, Sequences>> list = nGram.slicing();
-			for(Pair<Long, Sequences> pair : list){
-				System.out.print(Long.toBinaryString(pair.getFirst()) + " : ");
-				System.out.println(pair.getSecond().toString());
-			}
+//			NGram nGram = new NGram(entry.getValue());
+//			List<Pair<Long, Sequences>> list = nGram.slicing();
+//			for(Pair<Long, Sequences> pair : list){
+//				System.out.print(Long.toBinaryString(pair.getFirst()) + " : ");
+//				System.out.println(pair.getSecond().toString());
+//			}
 			
 		}
 		try {
@@ -72,28 +73,33 @@ public class JavaFile {
 			e.printStackTrace();
 		}
 		
-		NGram nGram = new NGram(sList);
-		nGram.slicing();
-		Sequences query = new Sequences();
-		// 1000000001000000000 : k:int : [<FOR, 512, 0>, <ARRAYACCESS, 262144, 4>]
-		query.addStatementPattern("k:int", new ForPattern(PatternValue.FOR_UPDATE, 0));
-		query.addStatementPattern("k:int", new ArrayAccessPattern(PatternValue.ARRAY_ACC_INDEX, 4));
+//		NGram nGram = new NGram(sList);
+//		nGram.slicing();
+//		Sequences query = new Sequences();
+//		// 1000000001000000000 : k:int : [<FOR, 512, 0>, <ARRAYACCESS, 262144, 4>]
+//		query.addStatementPattern("k:int", new ForPattern(PatternValue.FOR_UPDATE, 0));
+//		query.addStatementPattern("k:int", new ArrayAccessPattern(PatternValue.ARRAY_ACC_INDEX, 4));
+//		query.addStatementPattern("k:int", new ForPattern(PatternValue.FOR_INIT, 4));
+//		
+//		// 10010000 : a:int : [<ASSIGN, 16, 4>, <FOR, 128, 4>]
+////		query.addStatementPattern("a:int", new AssignPattern(PatternValue.ASSIGN_RIGHT, 4));
+////		query.addStatementPattern("a:int", new ForPattern(PatternValue.FOR_INIT, 4));
+//		
+//		// 1000000000000000000000100000 : a:int : [<VARDEF, 134217728, -1>, <IF, 32, 0>]
+////		query.addStatementPattern("a:int", new VariableDefPattern());
+////		query.addStatementPattern("a:int", new IfPattern(0));
+//		
+//		System.out.println("\n\nHere is a test query======\n");
+//		System.out.println(Long.toBinaryString(query.getHexValueRepresent()) + " : " + query);
+//		System.out.println("result------\n");
+//		for(Pair<Sequences, Pair<Double, Double> > sequences : nGram.query(query)){
+//			System.out.println(sequences.getFirst() + ":" + sequences.getSecond().getFirst() + ":" + sequences.getSecond().getSecond());
+//		}
 		
-		// 10010000 : a:int : [<ASSIGN, 16, 4>, <FOR, 128, 4>]
-//		query.addStatementPattern("a:int", new AssignPattern(PatternValue.ASSIGN_RIGHT, 4));
-//		query.addStatementPattern("a:int", new ForPattern(PatternValue.FOR_INIT, 4));
-		
-		// 1000000000000000000000100000 : a:int : [<VARDEF, 134217728, -1>, <IF, 32, 0>]
-//		query.addStatementPattern("a:int", new VariableDefPattern());
-//		query.addStatementPattern("a:int", new IfPattern(0));
-		
-		System.out.println("\n\nHere is a test query======\n");
-		System.out.println(Long.toBinaryString(query.getHexValueRepresent()) + " : " + query);
-		System.out.println("result------\n");
-		for(Pair<Sequences, Double> sequences : nGram.query(query)){
-			System.out.println(sequences.getFirst());
-		}
-		
+	}
+	
+	public List<Sequences> getTrainSequences(){
+		return this.sList;
 	}
 
 	private void ergodic(File file) {
@@ -121,6 +127,44 @@ public class JavaFile {
 				}
 			}
 		}
+	}
+	
+	public static File findFile(File file, String className){
+		File returnfile = null;
+		File[] files = file.listFiles();
+		if(files == null){
+			return returnfile;
+		} else {
+			for(File f : files){
+				if(f.isDirectory()){
+					returnfile = findFile(f, className);
+				} else if(f.getName().endsWith(".java")){
+					String name = f.getName();
+					System.out.println(name);
+//					name = name.substring(name.lastIndexOf("/"));
+					if(name.equals(className)){
+						return f;
+					}
+				}
+			}
+		}
+		return returnfile;
+	}
+	
+	public static List<File> ergodic(File file, List<File> list){
+		File[] files = file.listFiles();
+		if(files == null){
+			return list;
+		} else {
+			for(File f : files){
+				if(f.isDirectory()){
+					ergodic(f, list);
+				} else if(f.getName().endsWith(".java")){
+					list.add(f);
+				}
+			}
+		}
+		return list;
 	}
 
 	private String readFileToString(File file) {

@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.sound.midi.Sequence;
+
 import org.eclipse.jdt.core.dom.Type;
 
 public class Sequences {
@@ -23,6 +25,76 @@ public class Sequences {
 	 */
 	public void setFilterLength(int n){
 		filterLength = n;
+	}
+	
+	public int oneDiffStatementPattern(Sequences sequences){
+		if(this.sequenceMap.size() != 1 || sequences.sequenceMap.size() != 1){
+			System.out.println("Get sequence different number error, the length is not 1.");
+			return -1;
+		}
+		List<StatementPattern> self = getStatementPatterns();
+		List<StatementPattern> other = sequences.getAllStatementPatterns();
+		int size = self.size();
+		if(size != other.size()){
+			System.out.println("Get sequence different number error, sequences' lengths are not equal.");
+			return -1;
+		}
+		boolean oneDiff = false;
+		// diffType : 1,should add a statement; 2,should delete a statement; 3, should change a statement
+		int diffType = -1;
+		for(int i = 0, j = 0; i < size && j < size;){
+			if(self.get(i).getHexPosition() != other.get(j).getHexPosition()){
+				if(oneDiff){
+					return -1;
+				} else {
+					if(i + 1 == size || j + 1 == size){
+						diffType = 3;
+						return diffType;
+					}
+					if(self.get(i).getHexPosition() == other.get(j+1).getHexPosition()){
+						oneDiff = true;
+						diffType = 1;
+						i ++;
+						j += 2;
+					} else if(self.get(i+1).getHexPosition() == other.get(j).getHexPosition()){
+						oneDiff = true;
+						diffType = 2;
+						i += 2;
+						j++;
+					} else {
+						oneDiff = true;
+						diffType = 3;
+						i ++;
+						j ++;
+					}
+				}
+			} else {
+				i ++;
+				j ++;
+			}
+		}
+		return diffType;
+	}
+	
+	/**
+	 * obtain all {@code StatementPattern}s from current sequences, 
+	 * TODO need to be refactored, the structure of the sequence should be split
+	 * into two classes, and one holds a single sequence, the other holds the 
+	 * sequence list
+	 * 
+	 * using it to get a sequence of {@code StatementPattern} temporary, only used 
+	 * in query process
+	 * @return
+	 */
+	public List<StatementPattern> getStatementPatterns(){
+		List<StatementPattern> statements = new ArrayList<>();
+		for(Entry<String, List<StatementPattern>> entry : sequenceMap.entrySet()){
+			List<StatementPattern> list = entry.getValue();
+			for(StatementPattern statementPattern : list){
+				statements.add(statementPattern);
+			}
+		}
+		return statements;
 	}
 
 	/**
@@ -139,6 +211,31 @@ public class Sequences {
 			}
 		}
 		return result;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(obj instanceof Sequences){
+			Sequences comp = (Sequences) obj;
+			if(sequenceMap.size() != 1 || comp.sequenceMap.size() != 1){
+				return false;
+			} else {
+				List<StatementPattern> self = getAllStatementPatterns();
+				List<StatementPattern> other = comp.getAllStatementPatterns();
+				if(self.size() != other.size()){
+					return false;
+				} else {
+					for(int i = 0; i < self.size(); i++){
+						if(self.get(i).getLabel() != other.get(i).getLabel()){
+							return false;
+						}
+					}
+					return true;
+				}
+			}
+		} else {
+			return false;
+		}
 	}
 	
 	@Override
