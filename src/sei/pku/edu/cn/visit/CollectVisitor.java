@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.PrimitiveIterator.OfDouble;
+
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter.DEFAULT;
 
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -30,6 +33,7 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.Type;
@@ -52,7 +56,7 @@ import sei.pku.edu.cn.pattern.NewInstancePattern;
 import sei.pku.edu.cn.pattern.ParamPattern;
 import sei.pku.edu.cn.pattern.PatternValue;
 import sei.pku.edu.cn.pattern.ReturnPattern;
-import sei.pku.edu.cn.pattern.Sequence;
+import sei.pku.edu.cn.pattern.Sequences;
 import sei.pku.edu.cn.pattern.SimplePattern;
 import sei.pku.edu.cn.pattern.StatementPattern;
 import sei.pku.edu.cn.pattern.SwitchPattern;
@@ -64,20 +68,29 @@ public class CollectVisitor extends ASTVisitor {
 	Map<String, Class<?>> typeMapping = new HashMap<>();
 	Stack<String> variableStackForBreakStatement = new Stack<>();
 	
-	List<Sequence> sequences;
-	Sequence sequence;
+	List<Sequences> sequences;
+	Sequences sequence;
+	boolean debug = false;
 	
 	String methodName;
 	
-	public CollectVisitor(List<Sequence> sequence) {
+	public CollectVisitor(List<Sequences> sequence) {
 		this.sequences = sequence;
 	}
 	
 	@Override
 	public boolean visit(MethodDeclaration node) {
-		sequence = new Sequence();
+		sequence = new Sequences();
+		//using the method name and parameters' types as keyword
 		methodName = node.getName().toString();
+		String params = "";
+		for(Object obj : node.parameters()){
+			SingleVariableDeclaration singleVariableDeclaration = (SingleVariableDeclaration) obj;
+			params += ","+singleVariableDeclaration.getType().toString();
+		}
+		methodName += params;
 		
+		//collect parameters' information
 		List<ASTNode> parameters = node.parameters();
 		for(int i = 1; i <= parameters.size(); i++){
 			ASTNode param = parameters.get(i-1);
@@ -85,12 +98,12 @@ public class CollectVisitor extends ASTVisitor {
 			param.accept(variableVisitor);
 			List<String> variables = variableVisitor.getVariables();
 			for(String variable : variables){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ParamPattern((PatternValue.METHOD_PARAM | (long)i));
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
 		}
-		
+		//process method body statements.
 		Block block = node.getBody();
 		if(block == null){
 			return true;
@@ -100,10 +113,17 @@ public class CollectVisitor extends ASTVisitor {
 		for(Statement statement : statementlist){
 			processStatement(statement, BlockLevel.BLOCK_NO);
 		}
-		sequences.add(sequence);
+		
+		sequences.add(sequence.lengthFilter());
+		
 		return true;
 	}
 	
+	/**
+	 * all statements are processed in this method
+	 * @param statement : to be processed statement
+	 * @param blockFlag : the flag of block which the statement is in 
+	 */
 	private void processStatement(Statement statement, int blockFlag){
 		if(statement == null){
 			return;
@@ -116,8 +136,9 @@ public class CollectVisitor extends ASTVisitor {
 			}
 		} else if(statement instanceof IfStatement){
 			// print for debugging
-//			System.out.println("If Statement "+statement);
-			
+			if(debug){
+				System.out.println("If Statement "+statement);
+			}
 			IfStatement ifStatement = (IfStatement) statement;
 			
 			VariableVisitor variableVisitor = new VariableVisitor();
@@ -126,7 +147,7 @@ public class CollectVisitor extends ASTVisitor {
 			String variables = "$$";
 			for(String variable : variableVisitor.getVariables()){
 				StatementPattern statementPattern = new IfPattern(blockFlag);
-				Type clazz = Utils.getVariableType(methodName, variable);
+				Type clazz = TypingInfo.getVariableType(methodName, variable);
 				sequence.addStatementPattern(variable, clazz, statementPattern);
 				variables += "," + variable + ":" + clazz;
 			}
@@ -143,36 +164,46 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof ForStatement){
 			// print for debugging
-//			System.out.println("For Statement "+statement);
+			if(debug){
+				System.out.println("For Statement "+statement);
+			}
 			
 			ForStatement forStatement = (ForStatement) statement;
 
-			for(Object init : forStatement.initializers()){
-				Expression initStatement = (Expression) init;
-				VariableVisitor varVisitor = new VariableVisitor();
-				initStatement.accept(varVisitor);
-				for(String variable : varVisitor.getVariables()){
-					Type clazz = Utils.getVariableType(methodName, variable);
-					StatementPattern statementPattern = new ForPattern(PatternValue.FOR_INIT, blockFlag);
+			if(forStatement.initializers() != null){
+			
+				for(Object init : forStatement.initializers()){
+					Expression initStatement = (Expression) init;
+					VariableVisitor varVisitor = new VariableVisitor();
+					initStatement.accept(varVisitor);
+					for(String variable : varVisitor.getVariables()){
+						Type clazz = TypingInfo.getVariableType(methodName, variable);
+						StatementPattern statementPattern = new ForPattern(PatternValue.FOR_INIT, blockFlag);
+						sequence.addStatementPattern(variable, clazz, statementPattern);
+					}
+				}
+			}
+			
+			if(forStatement.getExpression() != null){
+				VariableVisitor variableVisitor = new VariableVisitor();
+				forStatement.getExpression().accept(variableVisitor);
+				for(String variable : variableVisitor.getVariables()){
+					Type clazz = TypingInfo.getVariableType(methodName, variable);
+					StatementPattern statementPattern = new ForPattern(PatternValue.FOR_COND, blockFlag);
 					sequence.addStatementPattern(variable, clazz, statementPattern);
 				}
 			}
-			VariableVisitor variableVisitor = new VariableVisitor();
-			forStatement.getExpression().accept(variableVisitor);
-			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
-				StatementPattern statementPattern = new ForPattern(PatternValue.FOR_COND, blockFlag);
-				sequence.addStatementPattern(variable, clazz, statementPattern);
-			}
 			
-			for(Object update : forStatement.updaters()){
-				Expression updateStatement = (Expression) update;
-				VariableVisitor varVisitor = new VariableVisitor();
-				updateStatement.accept(varVisitor);
-				for(String variable : varVisitor.getVariables()){
-					Type clazz = Utils.getVariableType(methodName, variable);
-					StatementPattern statementPattern = new ForPattern(PatternValue.FOR_UPDATE, blockFlag);
-					sequence.addStatementPattern(variable, clazz, statementPattern);
+			if(forStatement.updaters() != null){
+				for(Object update : forStatement.updaters()){
+					Expression updateStatement = (Expression) update;
+					VariableVisitor varVisitor = new VariableVisitor();
+					updateStatement.accept(varVisitor);
+					for(String variable : varVisitor.getVariables()){
+						Type clazz = TypingInfo.getVariableType(methodName, variable);
+						StatementPattern statementPattern = new ForPattern(PatternValue.FOR_UPDATE, blockFlag);
+						sequence.addStatementPattern(variable, clazz, statementPattern);
+					}
 				}
 			}
 			
@@ -181,14 +212,16 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof WhileStatement){
 			// print for debugging
-//			System.out.println("While Statement "+statement);
+			if(debug) {
+				System.out.println("While Statement "+statement);
+			}
 			
 			WhileStatement whileStatement = (WhileStatement) statement;
 			
 			VariableVisitor variableVisitor = new VariableVisitor();
 			whileStatement.getExpression().accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
+				Type clazz = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new WhilePattern(blockFlag);
 				sequence.addStatementPattern(variable, clazz, statementPattern);
 			}
@@ -198,14 +231,16 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof DoStatement){
 			// print for debugging
-//			System.out.println("Do Statement "+statement);
+			if(debug){
+				System.out.println("Do Statement "+statement);
+			}
 			
 			DoStatement doStatement = (DoStatement) statement;
 			
 			VariableVisitor variableVisitor = new VariableVisitor();
 			doStatement.getExpression().accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
+				Type clazz = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new WhilePattern(blockFlag);
 				sequence.addStatementPattern(variable, clazz, statementPattern);
 			}
@@ -215,14 +250,16 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof EnhancedForStatement){
 			// print for debugging
-//			System.out.println("EnhancedFor Statement "+statement);
+			if(debug){
+				System.out.println("EnhancedFor Statement "+statement);
+			}
 			
 			EnhancedForStatement enhancedForStatement = (EnhancedForStatement) statement;
 			
 			VariableVisitor variableVisitor = new VariableVisitor();
 			enhancedForStatement.getParameter().accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
+				Type clazz = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new EForPattern(PatternValue.EFOR_DEF, blockFlag);
 				sequence.addStatementPattern(variable, clazz, statementPattern);
 			}
@@ -230,7 +267,7 @@ public class CollectVisitor extends ASTVisitor {
 			variableVisitor = new VariableVisitor();
 			enhancedForStatement.getExpression().accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
+				Type clazz = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new EForPattern(PatternValue.EFOR_ARRAY, blockFlag);
 				sequence.addStatementPattern(variable, clazz, statementPattern);
 			}
@@ -240,14 +277,17 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof SwitchStatement){
 			// print for debugging
-//			System.out.println("Switch Statement "+statement);
+			if(debug){
+				System.out.println("Switch Statement "+statement);
+			}
+			
 			SwitchStatement switchStatement = (SwitchStatement) statement;
 			
 			VariableVisitor variableVisitor = new VariableVisitor();
 			switchStatement.getExpression().accept(variableVisitor);
 			String variables = "$$";
 			for(String variable : variableVisitor.getVariables()){
-				Type clazz = Utils.getVariableType(methodName, variable);
+				Type clazz = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new SwitchPattern(blockFlag);
 				sequence.addStatementPattern(variable, clazz, statementPattern);
 				variables += "," + variable + ":" + clazz;
@@ -264,7 +304,9 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof BreakStatement){
 			// print for debugging
-//			System.out.println("Break Statement "+statement);
+			if(debug){
+				System.out.println("Break Statement "+statement);
+			}
 			if(variableStackForBreakStatement.isEmpty()){
 				return;
 			}
@@ -277,7 +319,9 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof ContinueStatement){
 			// print for debugging
-//			System.out.println("Continue Statement "+statement);
+			if(debug){
+				System.out.println("Continue Statement "+statement);
+			}
 			if(variableStackForBreakStatement.isEmpty()){
 				return;
 			}
@@ -290,7 +334,9 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(statement instanceof ReturnStatement){
 			// print for debugging
-//			System.out.println("Return Statement "+statement);
+			if(debug){
+				System.out.println("Return Statement "+statement);
+			}
 			
 			ReturnStatement returnStatement = (ReturnStatement) statement;
 			VariableVisitor variableVisitor = new VariableVisitor();
@@ -300,14 +346,16 @@ public class CollectVisitor extends ASTVisitor {
 			returnStatement.getExpression().accept(variableVisitor);
 			
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ReturnPattern(blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
 			
 		} else if(statement instanceof VariableDeclarationStatement){
 			// print for debugging
-//			System.out.println("VariableDeclaration Statement "+statement);
+			if(debug){
+				System.out.println("VariableDeclaration Statement "+statement);
+			}
 			
 			VariableDeclarationStatement variableDeclarationStatement = (VariableDeclarationStatement) statement;
 			Type type = variableDeclarationStatement.getType();
@@ -332,24 +380,34 @@ public class CollectVisitor extends ASTVisitor {
 			ExpressionStatement expressionStatement = (ExpressionStatement) statement;
 			processExpression(expressionStatement.getExpression(), blockFlag);
 		} else {
-			System.out.println("Unknown statement while process : " + statement);
+			if(debug){
+				System.out.println("Unknown statement while process : " + statement);
+			}
 		}
 	}
 	
+	/**
+	 * all expressions are processed in this method
+	 * it defines all expressions we consider 
+	 * @param expression : expression to be processed
+	 * @param blockFlag : the flag of block which the expression is in
+	 */
 	private void processExpression(Expression expression, int blockFlag){
 		if(expression == null){
 			return;
 		}
 		if(expression instanceof ArrayAccess){
 			// print for debugging
-//			System.out.println("ArrayAccess Expression "+ expression);
+			if(debug){
+				System.out.println("ArrayAccess Expression "+ expression);
+			}
 			
 			ArrayAccess arrayAccess = (ArrayAccess) expression;
 			
 			VariableVisitor variableVisitor = new VariableVisitor();
 			arrayAccess.getArray().accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ArrayAccessPattern(PatternValue.ARRAY_ACC_OBJ, blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
@@ -357,31 +415,37 @@ public class CollectVisitor extends ASTVisitor {
 			variableVisitor = new VariableVisitor();
 			arrayAccess.getIndex().accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ArrayAccessPattern(PatternValue.ARRAY_ACC_INDEX, blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
 			
 		} else if(expression instanceof ArrayCreation){
 			// print for debugging
-//			System.out.println("ArrayCreation Expression "+ expression);
+			if(debug){
+				System.out.println("ArrayCreation Expression "+ expression);
+			}
 			
 			ArrayCreation arrayCreation = (ArrayCreation) expression;
 			VariableVisitor variableVisitor = new VariableVisitor();
 			arrayCreation.accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ArrayCreatePattern(blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
 			
 		} else if(expression instanceof ArrayInitializer){
 			// print for debugging
-//			System.out.println("ArrayInitializer Expression "+ expression);
+			if(debug){
+				System.out.println("ArrayInitializer Expression "+ expression);
+			}
 			
 		} else if(expression instanceof Assignment){
 			// print for debugging
-//			System.out.println("Assignment Expression "+ expression);
+			if(debug){
+				System.out.println("Assignment Expression "+ expression);
+			}
 			
 			Assignment assignment = (Assignment) expression;
 			Expression lExpression = assignment.getLeftHandSide();
@@ -392,7 +456,7 @@ public class CollectVisitor extends ASTVisitor {
 				lExpression.accept(variableVisitor);
 				// handle the returned value
 				for(String variable : variableVisitor.getVariables()){
-					Type type = Utils.getVariableType(methodName, variable);
+					Type type = TypingInfo.getVariableType(methodName, variable);
 					StatementPattern statementPattern = new InvokePattern(PatternValue.INVOKE_RET, blockFlag);
 					sequence.addStatementPattern(variable, type, statementPattern);
 				}
@@ -404,7 +468,7 @@ public class CollectVisitor extends ASTVisitor {
 					variableVisitor = new VariableVisitor();
 					object.accept(variableVisitor);
 					for(String variable : variableVisitor.getVariables()){
-						Type type = Utils.getVariableType(methodName, variable);
+						Type type = TypingInfo.getVariableType(methodName, variable);
 						StatementPattern statementPattern = new InvokePattern(PatternValue.INVOKE_OBJ, blockFlag);
 						sequence.addStatementPattern(variable, type, statementPattern);
 					}
@@ -416,7 +480,7 @@ public class CollectVisitor extends ASTVisitor {
 					variableVisitor = new VariableVisitor();
 					param.accept(variableVisitor);
 					for(String variable : variableVisitor.getVariables()){
-						Type type = Utils.getVariableType(methodName, variable);
+						Type type = TypingInfo.getVariableType(methodName, variable);
 						StatementPattern statementPattern = new InvokePattern((PatternValue.INVOKE_PARAM | (long)i), blockFlag);
 						sequence.addStatementPattern(variable, type, statementPattern);
 					}
@@ -426,7 +490,7 @@ public class CollectVisitor extends ASTVisitor {
 				lExpression.accept(variableVisitor);
 				// handle the returned value
 				for(String variable : variableVisitor.getVariables()){
-					Type type = Utils.getVariableType(methodName, variable);
+					Type type = TypingInfo.getVariableType(methodName, variable);
 					StatementPattern statementPattern = new NewInstancePattern(PatternValue.NEWINSTANCE_RET, blockFlag);
 					sequence.addStatementPattern(variable, type, statementPattern);
 				}
@@ -438,7 +502,7 @@ public class CollectVisitor extends ASTVisitor {
 					variableVisitor = new VariableVisitor();
 					object.accept(variableVisitor);
 					for(String variable : variableVisitor.getVariables()){
-						Type type = Utils.getVariableType(methodName, variable);
+						Type type = TypingInfo.getVariableType(methodName, variable);
 						StatementPattern statementPattern = new NewInstancePattern(PatternValue.INVOKE_OBJ, blockFlag);
 						sequence.addStatementPattern(variable, type, statementPattern);
 					}
@@ -450,18 +514,17 @@ public class CollectVisitor extends ASTVisitor {
 					variableVisitor = new VariableVisitor();
 					param.accept(variableVisitor);
 					for(String variable : variableVisitor.getVariables()){
-						Type type = Utils.getVariableType(methodName, variable);
+						Type type = TypingInfo.getVariableType(methodName, variable);
 						StatementPattern statementPattern = new NewInstancePattern((PatternValue.NEWINSTANCE_PARAN | (long)i), blockFlag);
 						sequence.addStatementPattern(variable, type, statementPattern);
 					}
 				}
 				
-				
 			} else{
 				
 				lExpression.accept(variableVisitor);
 				for(String variable : variableVisitor.getVariables()){
-					Type type = Utils.getVariableType(methodName, variable);
+					Type type = TypingInfo.getVariableType(methodName, variable);
 					StatementPattern statementPattern = new AssignPattern(PatternValue.ASSIGN_LEFT, blockFlag);
 					sequence.addStatementPattern(variable, type, statementPattern);
 				}
@@ -471,7 +534,7 @@ public class CollectVisitor extends ASTVisitor {
 					variableVisitor = new VariableVisitor();
 					rExpression.accept(variableVisitor);
 					for(String variable : variableVisitor.getVariables()){
-						Type type = Utils.getVariableType(methodName, variable);
+						Type type = TypingInfo.getVariableType(methodName, variable);
 						StatementPattern statementPattern = new AssignPattern(PatternValue.ASSIGN_RIGHT, blockFlag);
 						sequence.addStatementPattern(variable, type, statementPattern);
 					}
@@ -482,8 +545,9 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(expression instanceof ClassInstanceCreation){
 			// print for debugging
-//			System.out.println("ClassInstanceCreation Expression "+ expression);
-			
+			if(debug) {
+				System.out.println("ClassInstanceCreation Expression "+ expression);
+			}
 			ClassInstanceCreation classInstanceCreation = (ClassInstanceCreation) expression;
 			VariableVisitor variableVisitor = null;
 			
@@ -493,7 +557,7 @@ public class CollectVisitor extends ASTVisitor {
 				variableVisitor = new VariableVisitor();
 				object.accept(variableVisitor);
 				for(String variable : variableVisitor.getVariables()){
-					Type type = Utils.getVariableType(methodName, variable);
+					Type type = TypingInfo.getVariableType(methodName, variable);
 					StatementPattern statementPattern = new NewInstancePattern(PatternValue.NEWINSTANCE_OBJ, blockFlag);
 					sequence.addStatementPattern(variable, type, statementPattern);
 				}
@@ -505,7 +569,7 @@ public class CollectVisitor extends ASTVisitor {
 				variableVisitor = new VariableVisitor();
 				exp.accept(variableVisitor);
 				for(String variable : variableVisitor.getVariables()){
-					Type type = Utils.getVariableType(methodName, variable);
+					Type type = TypingInfo.getVariableType(methodName, variable);
 					StatementPattern statementPattern = new NewInstancePattern((PatternValue.NEWINSTANCE_PARAN | (long)i), blockFlag);
 					sequence.addStatementPattern(variable, type, statementPattern);
 				}
@@ -513,14 +577,16 @@ public class CollectVisitor extends ASTVisitor {
 			
 		} else if(expression instanceof ConditionalExpression){
 			// print for debugging
-//			System.out.println("Conditional Expression "+ expression);
+			if(debug){
+				System.out.println("Conditional Expression "+ expression);
+			}
 			
 			ConditionalExpression conditionalExpression = (ConditionalExpression) expression;
 			Expression condExp = conditionalExpression.getExpression();
 			VariableVisitor variableVisitor = new VariableVisitor();
 			condExp.accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ConditionalPattern(PatternValue.CONDITIONAL_COND, blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
@@ -529,7 +595,7 @@ public class CollectVisitor extends ASTVisitor {
 			variableVisitor = new VariableVisitor();
 			lExp.accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ConditionalPattern(PatternValue.CONDITIONAL_LEXP, blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
@@ -538,38 +604,51 @@ public class CollectVisitor extends ASTVisitor {
 			variableVisitor = new VariableVisitor();
 			rExp.accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new ConditionalPattern(PatternValue.CONDITIONAL_REXP, blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
 			
 		} else if(expression instanceof MethodInvocation){
 			// print for debugging
-//			System.out.println("MethodInvocation Expression "+ expression);
+			if(debug){
+				System.out.println("MethodInvocation Expression "+ expression);
+			}
 			
 		} else if(expression instanceof PostfixExpression || expression instanceof InfixExpression){
 			// print for debugging
-//			System.out.println("PostfixExpression/InfixExpression Expression "+ expression);
+			if(debug){
+				System.out.println("PostfixExpression/InfixExpression Expression "+ expression);
+			}
+			
 			VariableVisitor variableVisitor = new VariableVisitor();
 			expression.accept(variableVisitor);
 			for(String variable : variableVisitor.getVariables()){
-				Type type = Utils.getVariableType(methodName, variable);
+				Type type = TypingInfo.getVariableType(methodName, variable);
 				StatementPattern statementPattern = new SimplePattern(PatternValue.SIMPLE_EXP, blockFlag);
 				sequence.addStatementPattern(variable, type, statementPattern);
 			}
 			
 		} else {
-			System.out.println("Unknown expresion while process : "+expression);
+			if(debug){
+				System.out.println("Unknown expresion while process : "+expression);
+			}
 		}
 	}
 	
+	/**
+	 * this is an auxiliary class, which is used for collecting all variables
+	 * on the abstract syntax tree without identifying variables' positions
+	 * @author Jiajun
+	 *
+	 */
 	class VariableVisitor extends ASTVisitor{
 		private List<String> variables = new ArrayList<>();
 		
 		@Override
 		public boolean visit(SimpleName node) {
 			String name = node.toString();
-			if(null == Utils.getVariableType(methodName, node.toString())){
+			if(null == TypingInfo.getVariableType(methodName, node.toString())){
 				return true;
 			}
 			variables.add(node.toString());

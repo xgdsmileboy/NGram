@@ -49,6 +49,14 @@ public abstract class StatementPattern {
 		this.blockFlag = blockFlag;
 	}
 	
+	public Label getLabel(){
+		return label;
+	}
+	
+	public long getHexPosition() {
+		return hexPosition;
+	}
+	
 	@Override
 	public String toString() {
 		return "<" + this.label + ", " + this.hexPosition + ", " + this.blockFlag + ">";

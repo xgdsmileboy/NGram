@@ -1,4 +1,5 @@
 bin/
-testclass/
+testclass/train/
 .DS_Store
 .settings
+.txt
